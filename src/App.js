@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Web3 from "web3";
-import AddNumbersContract from "./AdditionContract.json";
+import AdditionContract from "./AdditionContract.json";
 
 function App() {
   const [account, setAccount] = useState("");
@@ -18,15 +18,23 @@ function App() {
         setAccount(accounts[0]);
 
         const networkId = await web3.eth.net.getId();
-        const deployedNetwork = AddNumbersContract.networks[networkId];
-        const instance = new web3.eth.Contract(
-          AddNumbersContract.abi,
-          deployedNetwork && deployedNetwork.address
-        );
-        setContract(instance);
+        const deployedNetwork = AdditionContract.networks[networkId];
 
-        const currentSum = await instance.methods.getSum().call();
-        setSum(currentSum);
+        if (deployedNetwork) {
+          const instance = new web3.eth.Contract(
+            AdditionContract.abi,
+            deployedNetwork.address
+          );
+          setContract(instance);
+
+          // Fetch initial sum
+          const currentSum = await instance.methods.getSum().call();
+          setSum(currentSum);
+        } else {
+          console.error("Smart contract not deployed on this network.");
+        }
+      } else {
+        console.error("Ethereum provider not found.");
       }
     }
     loadWeb3();
@@ -34,7 +42,11 @@ function App() {
 
   const handleAdd = async () => {
     if (contract) {
-      await contract.methods.add(num1, num2).send({ from: account });
+      await contract.methods
+        .add(Number(num1), Number(num2))
+        .send({ from: account }); // MetaMask will pop up here
+
+      // Fetch the updated sum
       const updatedSum = await contract.methods.getSum().call();
       setSum(updatedSum);
     }
